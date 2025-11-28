@@ -14,6 +14,8 @@ import ImageCropper from "@/components/ImageCropper"; // Assuming this path is c
 import { ModelToRenderType, sendToApiWithLocation, sendToApiWithoutLocation } from '@/utils/photo/modelUtils';
 import { styles } from '@/styles/photo/styles'
 import Ionicons from "@expo/vector-icons/Ionicons";
+import RNFS from 'react-native-fs';
+import {Buffer} from "buffer"
 
 const MAX_ZOOM_LEVEL = 0.5;
 type CameraViewRef = ElementRef<typeof CameraView> | null;
@@ -112,7 +114,7 @@ function usePhotoPageLogic() {
         setLoadedModelScene(null);
     }, []);
 
-    const loadModelData = useCallback((modelData: ModelToRenderType) => {
+    const loadModelData = useCallback(async (modelData: ModelToRenderType) => {
         setLoadedModelScene(null); // Clear previous scene and show loading indicator
         const loader = new GLTFLoader();
 
@@ -128,9 +130,36 @@ function usePhotoPageLogic() {
             loader.load(modelData.modelUrl, success, progress, error);
         } else if (modelData.modelData) {
             try {
-                loader.parse(modelData.modelData, '', success, error);
+                // 1. Convert ArrayBuffer to Base64 String
+                // react-native-fs requires the content to be a Base64 string for writing.
+                const buffer = Buffer.from(modelData.modelData);
+                const base64Data = buffer.toString('base64');
+
+                // 2. Define the temporary file path
+                const tempFilePath = `${RNFS.DocumentDirectoryPath}/test4-${modelData.filename}`;
+                const fileURI = `file://${tempFilePath}`;
+
+                const exists = await RNFS.exists(fileURI);
+                if (!exists) {
+                    // const result = await RNFS.downloadFile({
+                    //     fromUrl: "https://github.com/KhronosGroup/glTF-Sample-Models/blob/main/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+                    //     toFile: tempFilePath
+                    // }).promise;
+
+                    // 3. Write the file to local storage (react-native-fs)
+                    await RNFS.writeFile(tempFilePath, base64Data, 'base64');
+                    // console.log(`Model successfully saved to: ${fileURI}`);
+                    //
+                    setLoadedModelScene(fileURI); // Use the URI as the 'scene' data
+                } else {
+                    console.log("EXISTS")
+                    setLoadedModelScene(fileURI);
+                }
+
             } catch (e) {
-                error(e); // Handle synchronous parsing errors
+                console.error('File saving/loading error:', e);
+                Alert.alert('Model Error', 'Failed to save or load the 3D model file on device.');
+                setLoadedModelScene(null);
             }
         }
     }, []);
@@ -156,7 +185,7 @@ function usePhotoPageLogic() {
 
             setModelToRender(result.modelToRender);
             setApiResult(result.apiResult);
-            loadModelData(result.modelToRender);
+            await loadModelData(result.modelToRender);
 
         } catch (error: any) {
             console.error('API error:', error);

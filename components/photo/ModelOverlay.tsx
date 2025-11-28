@@ -27,7 +27,7 @@ export const ModelOverlay: React.FC<ModelOverlayProps> = ({ result, modelUri, lo
         {isLoading ? (
                 <ActivityIndicator size="large" color="#32CD32" />
 ) : (
-        <ModelLoader modelScene={loadedScene} />
+        <ModelLoader modelUri={loadedScene} />
 )}
     </View>
 
