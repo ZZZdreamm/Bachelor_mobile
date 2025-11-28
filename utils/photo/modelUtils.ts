@@ -60,7 +60,6 @@ async function sendPhotoToApi(
     }
 
     formData.append('building_image', fileToAppend);
-    formData.append('should_filter_location', shouldFilterLocation ? '1' : '0');
 
     if (location && shouldFilterLocation) {
         formData.append('location', `${location.latitude},${location.longitude}`);
